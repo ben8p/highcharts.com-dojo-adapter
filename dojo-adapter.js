@@ -44,7 +44,7 @@ require([
 	};
 	_Adapter = {
 		useAnim: true, //false to disable animation
-		handleAllEvents: true,
+		handleAllEvents: true, //see pull request #2589 (https://github.com/highslide-software/highcharts.com/pull/2589)
 		_scriptSignals: null, //internal use only
 		_id: 0,
 
@@ -505,34 +505,7 @@ require([
 			if(defaultFunction) {
 				defaultFunction(eventArgs);
 			}
-		},
-		isDescendant: function(/*Node*/node, /*String*/match) {
-			// summary:
-			//		Returns if an ancestor matches the query
-			//
-			// node: domNode
-			//		The root node at which to perform the query
-			//
-			// match: string queryParameter
-			//		The dojo/query selector to match
-			//
-			// returns:
-			//		Boolean
-
-			if(!node.parentNode) {
-				console.error('dom::isDescendant failed because the node has no parent (is it attached to the dom?');
-				return false;
-			}
-
-			var nodes = query(node).closest(match); //JSLint ignore: use_context_with_query
-			if(nodes.length > 0) { return true; }
-
-			//check if node itself machtes the query
-			nodes = query(match, node.parentNode);
-			return nodes.some(function(item) {
-				return item === node;
-			});
-		},
+		}
 	};
 	//provide the adapter
 	kernel.global.HighchartsAdapter = _Adapter;
