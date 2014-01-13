@@ -1,5 +1,5 @@
-highcharts-dojo-adapters
+highcharts-dojo-adapter
 ========================
 
-A Dojo Toolkit (dojotoolkit.org) adapter for highcharts/highstocks (highcharts.com) — Edit
+A Dojo Toolkit (dojotoolkit.org) adapter for highcharts/highstocks (highcharts.com)
 
