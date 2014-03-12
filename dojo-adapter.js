@@ -111,7 +111,7 @@ require([
 			// method: String
 			//		method of the object
 			//console.log('Highcharts.Dojo.Adapter::adapterRun',el, method);
-			var g = domGeometry.getMarginBox(el);
+			var g = domGeometry.getContentBox(el);
 			switch(method) {
 			case 'height':
 				return g.h;
