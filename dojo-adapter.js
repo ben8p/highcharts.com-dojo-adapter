@@ -12,7 +12,7 @@ require([
 	'dojo/dom-style',
 
 	'dojo/aspect',
-	'ing/core/on'
+	'dojo/on'
 ], function(array, baseEvent, baseFx, kernel, lang, sniff, win,
 	domAttr, domGeometry, domStyle,
 	aspect, on) {
@@ -20,13 +20,15 @@ require([
 	//		Dojo adapter for HighStock/HighChart
 
 	var PropLine = function(properties) {
-		// summary:
-		//		PropLine is an internal class which is used to model the values of
-		//		an a group of properties across an animation lifecycle. In
-		//		particular, the 'getValue' function handles getting interpolated
-		//		values between start and end for a particular value.
-		this._properties = properties;
-	}, _Adapter;
+			// summary:
+			//		PropLine is an internal class which is used to model the values of
+			//		an a group of properties across an animation lifecycle. In
+			//		particular, the 'getValue' function handles getting interpolated
+			//		values between start and end for a particular value.
+			this._properties = properties;
+		},
+		_Adapter,
+		testAtoZ = /[a-zA-Z]/;
 	PropLine.prototype.getValue = function(r) {
 		// summary:
 		//		handles getting interpolated values between start and end for a particular value.
@@ -40,10 +42,10 @@ require([
 				} else {
 					ret[p] = [];
 					for(i = 0; i < start.length; i++) {
-						if(/[a-zA-Z]/.test(start[i])) {
+						if(testAtoZ.test(start[i])) {
 							ret[p][i] = prop.start[i];
 						} else {
-							ret[p][i] = (((+prop.end[i]) - (+start[i])) * r) + (+start[i]);
+							ret[p][i] = ((prop.end[i] - start[i]) * r) + start[i];
 						}
 					}
 				}
