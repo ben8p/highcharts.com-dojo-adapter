@@ -7,36 +7,47 @@ require([
 	'dojo/_base/sniff',
 	'dojo/_base/window',
 
-	'dojo/dom-construct',
+	'dojo/dom-attr',
 	'dojo/dom-geometry',
 	'dojo/dom-style',
 
 	'dojo/aspect',
 	'dojo/on'
 ], function(array, baseEvent, baseFx, kernel, lang, sniff, win,
-	domConstruct, domGeometry, domStyle,
+	domAttr, domGeometry, domStyle,
 	aspect, on) {
 	// summary:
 	//		Dojo adapter for HighStock/HighChart
 
 	var PropLine = function(properties) {
-		// summary:
-		//		PropLine is an internal class which is used to model the values of
-		//		an a group of properties across an animation lifecycle. In
-		//		particular, the 'getValue' function handles getting interpolated
-		//		values between start and end for a particular value.
-		this._properties = properties;
-	}, _Adapter;
+			// summary:
+			//		PropLine is an internal class which is used to model the values of
+			//		an a group of properties across an animation lifecycle. In
+			//		particular, the 'getValue' function handles getting interpolated
+			//		values between start and end for a particular value.
+			this._properties = properties;
+		},
+		_Adapter,
+		testAtoZ = /[a-zA-Z]/;
 	PropLine.prototype.getValue = function(r) {
 		// summary:
 		//		handles getting interpolated values between start and end for a particular value.
-		var ret = {}, p, prop, start;
+		var ret = {}, p, prop, start, i;
 		for(p in this._properties) {
 			if(this._properties.hasOwnProperty(p)) {
 				prop = this._properties[p];
 				start = prop.start;
-				if(!lang.isArray(start)) {
+				if(!(start instanceof Array)) {
 					ret[p] = ((prop.end - start) * r) + start;
+				} else {
+					ret[p] = [];
+					for(i = 0; i < start.length; i++) {
+						if(testAtoZ.test(start[i])) {
+							ret[p][i] = prop.start[i];
+						} else {
+							ret[p][i] = ((prop.end[i] - start[i]) * r) + start[i];
+						}
+					}
 				}
 			}
 		}
@@ -149,25 +160,11 @@ require([
 				}
 
 			} else {
-				var ns = _Adapter.getAdapterNs(el),
-					properties = params;
-				if(params.d) {
-					//path animation handle
-					properties = {
-						M: {
-							start: params.d[1],
-							end: params.d[2]
-						},
-						L: {
-							start: params.d[4],
-							end: params.d[5]
-						}
-					};
+				var ns = _Adapter.getAdapterNs(el);
 
-				}
 				ns.anim = new baseFx.Animation({
 					duration: (options.duration || 500),
-					beforeBegin: lang.hitch(_Adapter, 'onAnimBeforeBegin', el, properties),
+					beforeBegin: lang.hitch(_Adapter, 'onAnimBeforeBegin', el, params),
 					onEnd: lang.hitch(_Adapter, 'onAnimEnd', el, options.complete),
 					onAnimate: lang.hitch(_Adapter, 'onAnimate', el)
 				});
@@ -186,7 +183,9 @@ require([
 			var ns = _Adapter.getAdapterNs(el),
 				pm = {},
 				p,
-				prop;
+				prop,
+				d,
+				i;
 
 			for(p in properties) {
 				if(properties.hasOwnProperty(p)) {
@@ -195,25 +194,47 @@ require([
 					// we don't want to overwrite them or the functions won't be
 					// called if the animation is reused.
 
-					prop = properties[p];
-					if(lang.isFunction(prop)) {
-						prop = prop();
-					}
-					prop = pm[p] = lang.mixin({}, (lang.isObject(prop) ? prop : {
-						end: prop
-					}));
+					if(p !== 'd') {
+						prop = properties[p];
+						if(lang.isFunction(prop)) {
+							prop = prop();
+						}
+						prop = pm[p] = lang.mixin({}, (lang.isObject(prop) ? prop : {
+							end: prop
+						}));
 
-					if(p === 'y' && pm.height) {
-						prop.start = pm.height.end + prop.end;
-					}
+						if(p === 'y' && pm.height) {
+							prop.start = pm.height.end + prop.end;
+						}
 
-					if(lang.isFunction(prop.start)) {
-						prop.start = prop.start();
+						if(lang.isFunction(prop.start)) {
+							prop.start = prop.start();
+						}
+						if(lang.isFunction(prop.end)) {
+							prop.end = prop.end();
+						}
+						if(p === 'width' || p === 'height') {
+							prop.start = el.getBBox()[p];
+						} else {
+							prop.start = prop.start ? parseFloat(prop.start) : el[p] || ((el.xy && el.xy[p]) || domAttr.get(el.element, p) || 0);
+						}
+						if(prop.start === prop.end) {
+							delete pm[p];
+						}
+					} else {
+						if(el.d !== properties[p].join(' ')) {
+							d = el.d.split(' ');
+							for(i = 0; i < d.length; i++) {
+								if(!isNaN(+d[i])) {
+									d[i] = +d[i];
+								}
+							}
+							pm[p] = {
+								start: d,
+								end: properties[p]
+							};
+						}
 					}
-					if(lang.isFunction(prop.end)) {
-						prop.end = prop.end();
-					}
-					prop.start = prop.start ? parseFloat(prop.start) : 0;
 				}
 			}
 			ns.anim.curve = new PropLine(pm);
@@ -428,7 +449,7 @@ require([
 			var fn = ~event.toLowerCase().indexOf('mouse') ? _Adapter.normalizeMouseEvent(orgFn) : orgFn;
 
 			if(el.tagName || el === document) {
-				event = ~event.indexOf('on') ? event.slice(2) : event;
+				event = ~event.indexOf('on') ? event.slice(2) : event; //jslint ignore: weird_condition
 				_Adapter.getAdapterNs(el).signals[orgFn._signalId] = on(el, event, fn);
 			} else {
 				_Adapter.getAdapterNs(el).signals[orgFn._signalId] = aspect.after(el, 'on' + event, fn, true);
@@ -463,11 +484,11 @@ require([
 				i;
 
 			if(event && fn && fn._signalId) {
-				ns.signals[fn._signalId] && ns.signals[fn._signalId].remove && ns.signals[fn._signalId].remove();
+				ns.signals[fn._signalId] && ns.signals[fn._signalId].remove && ns.signals[fn._signalId].remove(); //jslint ignore: assignment_function_expression
 				delete ns.signals[fn._signalId];
 			} else {
 				for(i in ns.signals) {
-					if (ns.signals.hasOwnProperty(i)) {
+					if(ns.signals.hasOwnProperty(i)) {
 						ns.signals[i].remove();
 						delete ns.signals[i];
 					}
